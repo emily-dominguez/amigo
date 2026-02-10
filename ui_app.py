@@ -16,7 +16,7 @@ if "messages" not in st.session_state:
 if not st.session_state.messages:
     st.session_state.messages.append({
         "role": "assistant", 
-        "content": "Hi! I am What brings you in today?"
+        "content": "Hi! I am Amigo, your primary care assistant. What brings you in today?"
     })
 
 # Render chat history
