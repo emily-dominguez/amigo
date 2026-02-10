@@ -37,7 +37,9 @@ def build_emergency_response(triage: TriageResult) -> str:
         "Based on what you've told me, your symptoms may be serious.\n\n"
         "Here's what I recommend: please seek emergency care immediately or call 911.\n\n"
         "This is beyond what I can safely assess remotely. "
-        "I can provide guidance, but I cannot replace an in-person examination."
+        "I can provide guidance, but I cannot replace an in-person examination.\n\n"
+        "If this isn't improving in 1–2 days after getting urgent care, please contact your doctor or return to care. "
+        "How does this sound to you?"
     )
 
 def build_clarify_response() -> str:
@@ -99,7 +101,6 @@ def call_model(history: List[Dict[str, str]], patient_context: Dict[str, str], n
     return resp.choices[0].message.content
 
 def agent_reply(history: List[Dict[str, str]], user_message: str, patient_context: Dict[str, str]) -> AgentResult:
-    # Your triage stays perfect!
     triage_text = user_message  
     triage = triage_decision(triage_text)
     
@@ -110,8 +111,19 @@ def agent_reply(history: List[Dict[str, str]], user_message: str, patient_contex
             meta={"mode": "emergency", "matched": triage.matched_phrases}
         )
     
-    # Pure conversational LLM (no NEXT_FIELD complexity)
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
+    if triage.label == "clarify":
+        return AgentResult(
+            role="assistant",
+            content=build_clarify_response(),
+            meta={"mode": "clarify", "matched": triage.matched_phrases}
+        )
+
+    # Mild or non-emergency path: use conversational model with strong system instructions
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": f"TRIAGE_LEVEL: {triage.label}"},
+    ] + history
+
     resp = client.chat.completions.create(
         model="gpt-4.1-nano",
         messages=messages,
